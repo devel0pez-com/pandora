@@ -27,8 +27,6 @@
         # Clona o actualiza apache/datafusion-comet main
         cometFetch = pkgs.writeShellScriptBin "comet-fetch" ''
           set -e
-          FLAKE_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-          # Si estamos dentro de src/, subir un nivel
           if [ -d "$PWD/.git" ] && grep -q "datafusion-comet" "$PWD/.git/config" 2>/dev/null; then
             SRC_DIR="$PWD"
           elif [ -d "$PWD/${cometSrc}/.git" ]; then
@@ -52,16 +50,17 @@
 
         # Descarga Spark
         downloadSpark = pkgs.writeShellScriptBin "comet-setup" ''
+          set -euo pipefail
           SPARK_LOCAL="$PWD/.spark/${sparkDirName}"
           if [ ! -d "$SPARK_LOCAL" ]; then
-            echo "Descargando Spark ${sparkVersion}..."
+            echo "Downloading Spark ${sparkVersion}..."
             mkdir -p .spark
             ${pkgs.curl}/bin/curl -fSL "${sparkUrl}" -o ".spark/${sparkTgz}"
-            tar xzf ".spark/${sparkTgz}" -C .spark/
+            ${pkgs.gnutar}/bin/tar xzf ".spark/${sparkTgz}" -C .spark/
             rm -f ".spark/${sparkTgz}"
-            echo "Spark ${sparkVersion} instalado en .spark/"
+            echo "Spark ${sparkVersion} installed in .spark/"
           else
-            echo "Spark ${sparkVersion} ya existe en .spark/"
+            echo "Spark ${sparkVersion} already exists in .spark/"
           fi
           echo ""
           echo "SPARK_HOME=$SPARK_LOCAL"
@@ -75,6 +74,10 @@
           make release PROFILES="-Drat.skip=true"
           echo ""
           COMET_JAR=$(ls spark/target/comet-spark-spark${sparkVersionShort}_${scalaVersion}-*.jar 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1)
+          if [ -z "$COMET_JAR" ]; then
+            echo "Error: no Comet JAR found in spark/target/" >&2
+            exit 1
+          fi
           echo "JAR ready: $COMET_JAR"
         '';
 
@@ -300,6 +303,8 @@
             # Build tools
             cmake
             pkg-config
+            gnumake
+            gnutar
             curl
             git
 
