@@ -20,11 +20,11 @@
 
         sparkUrl = "https://archive.apache.org/dist/spark/spark-${sparkVersion}/${sparkTgz}";
 
-        # Directorio del source de Comet (clone de upstream)
+        # Comet source directory (upstream clone)
         cometSrc = "datafusion-comet";
         cometRepo = "https://github.com/apache/datafusion-comet.git";
 
-        # Clona o actualiza apache/datafusion-comet main
+        # Clone or update apache/datafusion-comet main
         cometFetch = pkgs.writeShellScriptBin "comet-fetch" ''
           set -e
           if [ -d "$PWD/.git" ] && grep -q "datafusion-comet" "$PWD/.git/config" 2>/dev/null; then
@@ -41,6 +41,13 @@
             echo "Now cd ${cometSrc} and run: nix develop path:.."
             exit 0
           fi
+          if [ -n "$(${pkgs.git}/bin/git -C "$SRC_DIR" status --porcelain)" ]; then
+            echo "WARNING: local changes detected in $SRC_DIR"
+            echo "Use --force to discard them, or stash/commit first."
+            if [ "''${1:-}" != "--force" ]; then
+              exit 1
+            fi
+          fi
           echo "Updating apache/datafusion-comet (main)..."
           ${pkgs.git}/bin/git -C "$SRC_DIR" fetch origin main
           ${pkgs.git}/bin/git -C "$SRC_DIR" reset --hard origin/main
@@ -48,7 +55,7 @@
           echo "Updated to latest main."
         '';
 
-        # Descarga Spark
+        # Download Spark
         downloadSpark = pkgs.writeShellScriptBin "comet-setup" ''
           set -euo pipefail
           SPARK_LOCAL="$PWD/.spark/${sparkDirName}"
@@ -91,18 +98,18 @@
         cometShell = pkgs.writeShellScriptBin "comet-shell" ''
           SPARK_LOCAL="$PWD/.spark/${sparkDirName}"
           if [ ! -d "$SPARK_LOCAL" ]; then
-            echo "Spark no encontrado. Ejecuta 'comet-setup' primero."
+            echo "Spark not found. Run 'comet-setup' first."
             exit 1
           fi
           export SPARK_HOME="$SPARK_LOCAL"
 
           COMET_JAR=$(ls spark/target/comet-spark-spark*.jar 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1)
           if [ -z "$COMET_JAR" ]; then
-            echo "JAR de Comet no encontrado. Ejecuta 'comet-build' primero."
+            echo "Comet JAR not found. Run 'comet-build' first."
             exit 1
           fi
 
-          echo "Lanzando spark-shell con Comet..."
+          echo "Launching spark-shell with Comet..."
           echo "  SPARK_HOME=$SPARK_HOME"
           echo "  COMET_JAR=$COMET_JAR"
           echo "  Spark UI: http://localhost:4040"
@@ -127,18 +134,18 @@
         cometSql = pkgs.writeShellScriptBin "comet-sql" ''
           SPARK_LOCAL="$PWD/.spark/${sparkDirName}"
           if [ ! -d "$SPARK_LOCAL" ]; then
-            echo "Spark no encontrado. Ejecuta 'comet-setup' primero."
+            echo "Spark not found. Run 'comet-setup' first."
             exit 1
           fi
           export SPARK_HOME="$SPARK_LOCAL"
 
           COMET_JAR=$(ls spark/target/comet-spark-spark*.jar 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1)
           if [ -z "$COMET_JAR" ]; then
-            echo "JAR de Comet no encontrado. Ejecuta 'comet-build' primero."
+            echo "Comet JAR not found. Run 'comet-build' first."
             exit 1
           fi
 
-          echo "Lanzando spark-sql con Comet..."
+          echo "Launching spark-sql with Comet..."
           echo "  Spark UI: http://localhost:4040"
           echo ""
 
@@ -192,18 +199,18 @@
             "$@"
         '';
 
-        # Ejecuta un .scala o .py con Comet
+        # Run a .scala or .py file with Comet
         cometRun = pkgs.writeShellScriptBin "comet-run" ''
           SPARK_LOCAL="$PWD/.spark/${sparkDirName}"
           if [ ! -d "$SPARK_LOCAL" ]; then
-            echo "Spark no encontrado. Ejecuta 'comet-setup' primero."
+            echo "Spark not found. Run 'comet-setup' first."
             exit 1
           fi
           export SPARK_HOME="$SPARK_LOCAL"
 
           COMET_JAR=$(ls spark/target/comet-spark-spark*.jar 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1)
           if [ -z "$COMET_JAR" ]; then
-            echo "JAR de Comet no encontrado. Ejecuta 'comet-build' primero."
+            echo "Comet JAR not found. Run 'comet-build' first."
             exit 1
           fi
 
@@ -248,18 +255,18 @@
         cometSubmit = pkgs.writeShellScriptBin "comet-submit" ''
           SPARK_LOCAL="$PWD/.spark/${sparkDirName}"
           if [ ! -d "$SPARK_LOCAL" ]; then
-            echo "Spark no encontrado. Ejecuta 'comet-setup' primero."
+            echo "Spark not found. Run 'comet-setup' first."
             exit 1
           fi
           export SPARK_HOME="$SPARK_LOCAL"
 
           COMET_JAR=$(ls spark/target/comet-spark-spark*.jar 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1)
           if [ -z "$COMET_JAR" ]; then
-            echo "JAR de Comet no encontrado. Ejecuta 'comet-build' primero."
+            echo "Comet JAR not found. Run 'comet-build' first."
             exit 1
           fi
 
-          echo "Lanzando spark-submit con Comet..."
+          echo "Launching spark-submit with Comet..."
           echo "  Spark UI: http://localhost:4040"
           echo ""
 
@@ -331,8 +338,10 @@
             export OPENSSL_LIB_DIR="${pkgs.openssl.out}/lib"
             export OPENSSL_INCLUDE_DIR="${pkgs.openssl.dev}/include"
 
-            # Si Spark ya esta descargado, exportar SPARK_HOME
-            if [ -d "$PWD/.spark/${sparkDirName}" ]; then
+            # Export SPARK_HOME if Spark is already downloaded
+            if [ -d "$PWD/${cometSrc}/.spark/${sparkDirName}" ]; then
+              export SPARK_HOME="$PWD/${cometSrc}/.spark/${sparkDirName}"
+            elif [ -d "$PWD/.spark/${sparkDirName}" ]; then
               export SPARK_HOME="$PWD/.spark/${sparkDirName}"
             fi
 

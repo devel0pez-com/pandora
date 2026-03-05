@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, sum, count, concat, lit, rand
+from pyspark.sql.functions import sum, count, rand
 
 spark = SparkSession.builder.getOrCreate()
 
