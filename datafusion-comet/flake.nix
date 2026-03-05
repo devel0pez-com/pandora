@@ -76,7 +76,7 @@
         cometBuild = pkgs.writeShellScriptBin "comet-build" ''
           set -e
           echo "=== Building Comet (native + JVM) via make release ==="
-          echo "    cargo build --release + mvnw install -Prelease -DskipTests"
+          echo "    make release PROFILES=\"-Drat.skip=true\""
           echo ""
           make release PROFILES="-Drat.skip=true"
           echo ""
