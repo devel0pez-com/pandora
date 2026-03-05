@@ -20,7 +20,7 @@ comet-shell                # spark-shell with Comet
 |---------------------|---------------------------------------------------|
 | `comet-fetch`       | Clone or update apache/datafusion-comet (main)     |
 | `comet-setup`       | Download Spark 3.5.7                               |
-| `comet-build`       | Full build: cargo release + mvnw install           |
+| `comet-build`       | Full build: make release                           |
 | `comet-build-debug` | Quick Rust-only debug build (no JAR)               |
 | `comet-shell`       | spark-shell with Comet (UI at localhost:4040)       |
 | `comet-sql`         | spark-sql with Comet                               |
