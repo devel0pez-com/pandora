@@ -15,6 +15,7 @@
           inherit system;
           overlays = [ devshell.overlays.default ];
         };
+        inherit (pkgs) lib stdenv;
 
         sparkVersion = "3.5.7";
         sparkVersionShort = "3.5";
@@ -24,6 +25,11 @@
         sparkTgz = "${sparkDirName}.tgz";
 
         sparkUrl = "https://archive.apache.org/dist/spark/spark-${sparkVersion}/${sparkTgz}";
+
+        # Comet version for pre-built JAR download
+        cometVersion = "0.6.0";
+        cometJarName = "comet-spark-spark${sparkVersionShort}_${scalaVersion}-${cometVersion}.jar";
+        cometJarUrl = "https://repo1.maven.org/maven2/org/apache/datafusion/comet-spark-spark${sparkVersionShort}_${scalaVersion}/${cometVersion}/${cometJarName}";
 
         # Comet source directory (upstream clone)
         cometSrc = "datafusion-comet";
@@ -82,6 +88,7 @@
             # System libs
             openssl
             openssl.dev
+            libiconv
 
             # Build tools
             cmake
@@ -91,6 +98,10 @@
             curl
             git
             python3
+          ] ++ lib.optionals stdenv.isDarwin [
+            darwin.apple_sdk.frameworks.Security
+            darwin.apple_sdk.frameworks.CoreFoundation
+            darwin.apple_sdk.frameworks.SystemConfiguration
           ];
 
           env = [
@@ -99,6 +110,7 @@
             { name = "OPENSSL_DIR"; value = "${pkgs.openssl.dev}"; }
             { name = "OPENSSL_LIB_DIR"; value = "${pkgs.openssl.out}/lib"; }
             { name = "OPENSSL_INCLUDE_DIR"; value = "${pkgs.openssl.dev}/include"; }
+            { name = "LIBRARY_PATH"; value = "${pkgs.libiconv}/lib"; }
           ];
 
           commands = [
@@ -185,6 +197,22 @@
                 echo "=== Building native only (debug) ==="
                 cd native && cargo build
                 echo "Done. Note: run 'comet-build' for a full release build with JAR."
+              '';
+            }
+            {
+              name = "comet-download-jar";
+              category = "setup";
+              help = "Download pre-built Comet ${cometVersion} JAR (no compilation needed)";
+              command = ''
+                set -euo pipefail
+                mkdir -p spark/target
+                if [ -f "spark/target/${cometJarName}" ]; then
+                  echo "Comet JAR already exists: spark/target/${cometJarName}"
+                else
+                  echo "Downloading Comet ${cometVersion} JAR from Maven Central..."
+                  ${pkgs.curl}/bin/curl -fSL "${cometJarUrl}" -o "spark/target/${cometJarName}"
+                  echo "Downloaded: spark/target/${cometJarName}"
+                fi
               '';
             }
             {
