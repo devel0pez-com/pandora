@@ -37,16 +37,15 @@
 
         # Shared: resolve Spark + Comet JAR
         sparkCheck = ''
-          SPARK_LOCAL="$PWD/.spark/${sparkDirName}"
-          if [ ! -d "$SPARK_LOCAL" ]; then
+          if [ -z "$PANDORA_SPARK" ] || [ ! -d "$PANDORA_SPARK/${sparkDirName}" ]; then
             echo "Spark not found. Run 'comet-setup' first."
             exit 1
           fi
-          export SPARK_HOME="$SPARK_LOCAL"
+          export SPARK_HOME="$PANDORA_SPARK/${sparkDirName}"
 
-          COMET_JAR=$(ls spark/target/comet-spark-spark*.jar 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1)
+          COMET_JAR=$(find spark/target -maxdepth 1 -name 'comet-spark-spark*.jar' 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1 || true)
           if [ -z "$COMET_JAR" ]; then
-            echo "Comet JAR not found. Run 'comet-build' first."
+            echo "Comet JAR not found. Run 'comet-build' or 'comet-download-jar' first."
             exit 1
           fi
         '';
@@ -151,22 +150,25 @@
             {
               name = "comet-setup";
               category = "setup";
-              help = "Download Spark ${sparkVersion}";
+              help = "Download Spark ${sparkVersion} (shared in resources/)";
               command = ''
                 set -euo pipefail
-                SPARK_LOCAL="$PWD/.spark/${sparkDirName}"
-                if [ ! -d "$SPARK_LOCAL" ]; then
-                  echo "Downloading Spark ${sparkVersion}..."
-                  mkdir -p .spark
-                  ${pkgs.curl}/bin/curl -fSL "${sparkUrl}" -o ".spark/${sparkTgz}"
-                  ${pkgs.gnutar}/bin/tar xzf ".spark/${sparkTgz}" -C .spark/
-                  rm -f ".spark/${sparkTgz}"
-                  echo "Spark ${sparkVersion} installed in .spark/"
+                if [ -z "$PANDORA_SPARK" ]; then
+                  echo "Error: PANDORA_SPARK not set. Re-enter the devshell."
+                  exit 1
+                fi
+                if [ -d "$PANDORA_SPARK/${sparkDirName}" ]; then
+                  echo "Spark ${sparkVersion} already exists in $PANDORA_SPARK/"
                 else
-                  echo "Spark ${sparkVersion} already exists in .spark/"
+                  echo "Downloading Spark ${sparkVersion} to shared resources..."
+                  mkdir -p "$PANDORA_SPARK"
+                  ${pkgs.curl}/bin/curl -fSL "${sparkUrl}" -o "$PANDORA_SPARK/${sparkTgz}"
+                  ${pkgs.gnutar}/bin/tar xzf "$PANDORA_SPARK/${sparkTgz}" -C "$PANDORA_SPARK/"
+                  rm -f "$PANDORA_SPARK/${sparkTgz}"
+                  echo "Spark ${sparkVersion} installed in $PANDORA_SPARK/"
                 fi
                 echo ""
-                echo "SPARK_HOME=$SPARK_LOCAL"
+                echo "SPARK_HOME=$PANDORA_SPARK/${sparkDirName}"
               '';
             }
             {
@@ -180,7 +182,7 @@
                 echo ""
                 make release PROFILES="-Drat.skip=true"
                 echo ""
-                COMET_JAR=$(ls spark/target/comet-spark-spark${sparkVersionShort}_${scalaVersion}-*.jar 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1)
+                COMET_JAR=$(find spark/target -maxdepth 1 -name "comet-spark-spark${sparkVersionShort}_${scalaVersion}-*.jar" 2>/dev/null | grep -v -E '(sources|javadoc|tests)' | head -1)
                 if [ -z "$COMET_JAR" ]; then
                   echo "Error: no Comet JAR found in spark/target/" >&2
                   exit 1
@@ -226,7 +228,7 @@
                 echo "  COMET_JAR=$COMET_JAR"
                 echo "  Spark UI: http://localhost:4040"
                 echo ""
-                exec $SPARK_HOME/bin/spark-shell ${cometConf} "$@"
+                exec "$SPARK_HOME/bin/spark-shell" ${cometConf} "$@"
               '';
             }
             {
@@ -238,7 +240,7 @@
                 echo "Launching spark-sql with Comet..."
                 echo "  Spark UI: http://localhost:4040"
                 echo ""
-                exec $SPARK_HOME/bin/spark-sql ${cometConf} "$@"
+                exec "$SPARK_HOME/bin/spark-sql" ${cometConf} "$@"
               '';
             }
             {
@@ -250,7 +252,7 @@
                 echo "Launching pyspark with Comet..."
                 echo "  Spark UI: http://localhost:4040"
                 echo ""
-                exec $SPARK_HOME/bin/pyspark ${cometConf} "$@"
+                exec "$SPARK_HOME/bin/pyspark" ${cometConf} "$@"
               '';
             }
             {
@@ -262,7 +264,7 @@
                 echo "Launching spark-submit with Comet..."
                 echo "  Spark UI: http://localhost:4040"
                 echo ""
-                exec $SPARK_HOME/bin/spark-submit ${cometConf} --conf spark.comet.exec.shuffle.mode=native "$@"
+                exec "$SPARK_HOME/bin/spark-submit" ${cometConf} --conf spark.comet.exec.shuffle.mode=native "$@"
               '';
             }
             {
@@ -280,11 +282,11 @@
                 case "$FILE" in
                   *.scala)
                     echo "Running $FILE in spark-shell..."
-                    exec $SPARK_HOME/bin/spark-shell ${cometConf} -I "$FILE" "$@"
+                    exec "$SPARK_HOME/bin/spark-shell" ${cometConf} -I "$FILE" "$@"
                     ;;
                   *.py)
                     echo "Running $FILE with spark-submit..."
-                    exec $SPARK_HOME/bin/spark-submit ${cometConf} "$FILE" "$@"
+                    exec "$SPARK_HOME/bin/spark-submit" ${cometConf} "$FILE" "$@"
                     ;;
                   *)
                     echo "Unsupported file type. Use .scala or .py"
@@ -297,11 +299,11 @@
 
           bash = {
             extra = ''
-              # Export SPARK_HOME if Spark is already downloaded
-              if [ -d "$PWD/${cometSrc}/.spark/${sparkDirName}" ]; then
-                export SPARK_HOME="$PWD/${cometSrc}/.spark/${sparkDirName}"
-              elif [ -d "$PWD/.spark/${sparkDirName}" ]; then
-                export SPARK_HOME="$PWD/.spark/${sparkDirName}"
+              # Resolve pandora resources dir (absolute path, works from any CWD)
+              PANDORA_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+              export PANDORA_SPARK="$PANDORA_ROOT/resources/spark"
+              if [ -d "$PANDORA_SPARK/${sparkDirName}" ]; then
+                export SPARK_HOME="$PANDORA_SPARK/${sparkDirName}"
               fi
             '';
             interactive = ''
