@@ -37,9 +37,25 @@
           fi
           export SPARK_HOME="$PANDORA_SPARK/${sparkDirName}"
 
-          AURON_JAR=$(find dev/mvn-build-helper/assembly/target -maxdepth 1 -name "auron-spark-${sparkVersion}_${scalaVersion}-*.jar" 2>/dev/null | grep -v -E '(sources|javadoc|tests|original)' | head -1 || true)
+          # Resolve Auron source directory independently of CWD
+          if [ -n "''${PANDORA_AURON_SRC:-}" ] && [ -d "$PANDORA_AURON_SRC" ]; then
+            AURON_SRC_DIR="$PANDORA_AURON_SRC"
+          elif git_root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -d "$git_root/dev/mvn-build-helper" ]; then
+            AURON_SRC_DIR="$git_root"
+          else
+            echo "Could not locate Auron source tree. Run from the Auron repo root or set PANDORA_AURON_SRC."
+            exit 1
+          fi
+
+          AURON_ASSEMBLY_DIR="$AURON_SRC_DIR/dev/mvn-build-helper/assembly/target"
+          if [ ! -d "$AURON_ASSEMBLY_DIR" ]; then
+            echo "Auron build output directory not found at '$AURON_ASSEMBLY_DIR'. Run 'auron-build' first."
+            exit 1
+          fi
+
+          AURON_JAR=$(find "$AURON_ASSEMBLY_DIR" -maxdepth 1 -name "auron-spark-${sparkVersion}_${scalaVersion}-*.jar" 2>/dev/null | grep -v -E '(sources|javadoc|tests|original)' | head -1 || true)
           if [ -z "$AURON_JAR" ]; then
-            echo "Auron JAR not found. Run 'auron-build' first."
+            echo "Auron JAR not found in '$AURON_ASSEMBLY_DIR'. Run 'auron-build' first."
             exit 1
           fi
         '';
@@ -140,7 +156,7 @@
               help = "Download Spark ${sparkFullVersion} (shared in resources/)";
               command = ''
                 set -euo pipefail
-                if [ -z "$PANDORA_SPARK" ]; then
+                if [ -z "${PANDORA_SPARK:-}" ]; then
                   echo "Error: PANDORA_SPARK not set. Re-enter the devshell."
                   exit 1
                 fi
@@ -275,6 +291,10 @@
             extra = ''
               # Resolve pandora resources dir (absolute path, works from any CWD)
               PANDORA_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+              if [ -z "$PANDORA_ROOT" ]; then
+                echo "Error: Could not determine PANDORA_ROOT. Please run this dev shell from within a Pandora git checkout." >&2
+                return 1 2>/dev/null || exit 1
+              fi
               export PANDORA_SPARK="$PANDORA_ROOT/resources/spark"
               if [ -d "$PANDORA_SPARK/${sparkDirName}" ]; then
                 export SPARK_HOME="$PANDORA_SPARK/${sparkDirName}"
