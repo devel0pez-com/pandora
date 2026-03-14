@@ -17,7 +17,7 @@
         };
         inherit (pkgs) lib stdenv;
 
-        sparkVersion = "3.5.7";
+        sparkVersion = "3.5.3";
         sparkVersionShort = "3.5";
         hadoopProfile = "3";
         scalaVersion = "2.12";
