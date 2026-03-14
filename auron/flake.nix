@@ -50,15 +50,8 @@
           fi
           export SPARK_HOME="$PANDORA_SPARK/${sparkDirName}"
 
-          # Resolve Auron source directory independently of CWD
-          if [ -n "''${PANDORA_AURON_SRC:-}" ] && [ -d "$PANDORA_AURON_SRC" ]; then
-            AURON_SRC_DIR="$PANDORA_AURON_SRC"
-          elif git_root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -d "$git_root/dev/mvn-build-helper" ]; then
-            AURON_SRC_DIR="$git_root"
-          else
-            echo "Could not locate Auron source tree. Run from the Auron repo root or set PANDORA_AURON_SRC."
-            exit 1
-          fi
+          # Resolve Auron source directory using shared helper
+          ${auronSrcCheck}
 
           AURON_ASSEMBLY_DIR="$AURON_SRC_DIR/dev/mvn-build-helper/assembly/target"
           if [ ! -d "$AURON_ASSEMBLY_DIR" ]; then
@@ -309,13 +302,33 @@
 
           bash = {
             extra = ''
-              # Resolve pandora resources dir (absolute path, works from any CWD)
-              PANDORA_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
-              if [ -z "$PANDORA_ROOT" ]; then
-                echo "Error: Could not determine PANDORA_ROOT. Please run this dev shell from within a Pandora git checkout." >&2
-                return 1 2>/dev/null || exit 1
+              # Resolve pandora resources dir
+              #
+              # Priority:
+              #   1. Honor pre-set PANDORA_SPARK.
+              #   2. Use git root (if available): $PANDORA_ROOT/resources/spark.
+              #   3. Fall back to $PWD/resources/spark (if it exists).
+              #   4. Fall back to XDG cache directory: $XDG_CACHE_HOME/pandora/spark
+              #      (or $HOME/.cache/pandora/spark if XDG_CACHE_HOME is unset).
+              if [ -z "''${PANDORA_SPARK:-}" ]; then
+                # Try to detect git root if we're in a checkout
+                PANDORA_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+                if [ -n "$PANDORA_ROOT" ]; then
+                  PANDORA_SPARK="$PANDORA_ROOT/resources/spark"
+                else
+                  # Not in a git checkout: try current working directory
+                  if [ -d "$PWD/resources/spark" ]; then
+                    PANDORA_SPARK="$PWD/resources/spark"
+                  else
+                    # Fall back to a writable cache location
+                    : "''${XDG_CACHE_HOME:=$HOME/.cache}"
+                    PANDORA_SPARK="$XDG_CACHE_HOME/pandora/spark"
+                    mkdir -p "$PANDORA_SPARK" 2>/dev/null || true
+                    echo "Warning: Could not determine Pandora git root; using cache directory for PANDORA_SPARK: $PANDORA_SPARK" >&2
+                  fi
+                fi
               fi
-              export PANDORA_SPARK="$PANDORA_ROOT/resources/spark"
+              export PANDORA_SPARK
               if [ -d "$PANDORA_SPARK/${sparkDirName}" ]; then
                 export SPARK_HOME="$PANDORA_SPARK/${sparkDirName}"
               fi
