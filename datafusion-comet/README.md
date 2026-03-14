@@ -9,7 +9,7 @@ cd pandora/datafusion-comet
 nix develop
 comet-fetch                # clone apache/datafusion-comet main
 cd datafusion-comet        # enter source tree
-comet-setup                # download Spark 3.5.3
+comet-setup                # download Spark 3.5.7
 comet-build                # build Comet (native + JVM)
 comet-shell                # spark-shell with Comet
 ```
@@ -19,7 +19,7 @@ comet-shell                # spark-shell with Comet
 | Command             | Description                                       |
 |---------------------|---------------------------------------------------|
 | `comet-fetch`       | Clone or update apache/datafusion-comet (main)     |
-| `comet-setup`       | Download Spark 3.5.3                               |
+| `comet-setup`       | Download Spark 3.5.7                               |
 | `comet-build`       | Full build: make release                           |
 | `comet-build-debug` | Quick Rust-only debug build (no JAR)               |
 | `comet-shell`       | spark-shell with Comet (UI at localhost:4040)       |
