@@ -29,6 +29,19 @@
         auronSrc = "auron";
         auronRepo = "https://github.com/apache/auron.git";
 
+        # Shared: resolve Auron source directory
+        auronSrcCheck = ''
+          AURON_SRC_DIR="''${PANDORA_AURON_SRC:-}"
+          if [ -z "$AURON_SRC_DIR" ]; then
+            if git_root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -d "$git_root/dev/mvn-build-helper" ]; then
+              AURON_SRC_DIR="$git_root"
+            else
+              echo "Error: Could not determine Auron source directory. Set PANDORA_AURON_SRC or run inside an Auron git checkout." >&2
+              exit 1
+            fi
+          fi
+        '';
+
         # Shared: resolve Spark + Auron JAR
         sparkCheck = ''
           if [ -z "$PANDORA_SPARK" ] || [ ! -d "$PANDORA_SPARK/${sparkDirName}" ]; then
@@ -123,7 +136,7 @@
               help = "Clone or update apache/auron (master)";
               command = ''
                 set -e
-                if [ -d "$PWD/.git" ] && grep -q "auron" "$PWD/.git/config" 2>/dev/null; then
+                if [ -d "$PWD/.git" ] && git -C "$PWD" config --get remote.origin.url 2>/dev/null | grep -q "apache/auron"; then
                   SRC_DIR="$PWD"
                 elif [ -d "$PWD/${auronSrc}/.git" ]; then
                   SRC_DIR="$PWD/${auronSrc}"
@@ -156,7 +169,7 @@
               help = "Download Spark ${sparkFullVersion} (shared in resources/)";
               command = ''
                 set -euo pipefail
-                if [ -z "${PANDORA_SPARK:-}" ]; then
+                if [ -z "''${PANDORA_SPARK:-}" ]; then
                   echo "Error: PANDORA_SPARK not set. Re-enter the devshell."
                   exit 1
                 fi
@@ -180,6 +193,8 @@
               help = "Full build via auron-build.sh (Spark ${sparkVersion}, Scala ${scalaVersion})";
               command = ''
                 set -e
+                ${auronSrcCheck}
+                cd "$AURON_SRC_DIR"
                 echo "=== Building Auron (Spark ${sparkVersion}, Scala ${scalaVersion}) ==="
                 bash auron-build.sh --sparkver ${sparkVersion} --scalaver ${scalaVersion} --release "$@"
                 echo ""
@@ -197,8 +212,9 @@
               help = "Build native engine only (Rust release)";
               command = ''
                 set -e
+                ${auronSrcCheck}
                 echo "=== Building native engine (Rust release) ==="
-                cd native-engine && cargo build --release
+                cd "$AURON_SRC_DIR/native-engine" && cargo build --release
                 echo ""
                 echo "Native build complete."
               '';
@@ -209,8 +225,9 @@
               help = "Build native engine (debug, faster compile)";
               command = ''
                 set -e
+                ${auronSrcCheck}
                 echo "=== Building native engine (debug) ==="
-                cd native-engine && cargo build
+                cd "$AURON_SRC_DIR/native-engine" && cargo build
                 echo ""
                 echo "Debug build complete."
               '';
@@ -221,6 +238,8 @@
               help = "Run Auron tests (Maven)";
               command = ''
                 set -e
+                ${auronSrcCheck}
+                cd "$AURON_SRC_DIR"
                 echo "=== Running Auron tests ==="
                 bash auron-build.sh --sparkver ${sparkVersion} --scalaver ${scalaVersion} --skiptests false "$@"
               '';
@@ -231,8 +250,9 @@
               help = "Run native engine tests (Rust)";
               command = ''
                 set -e
+                ${auronSrcCheck}
                 echo "=== Running native engine tests ==="
-                cd native-engine && cargo test "$@"
+                cd "$AURON_SRC_DIR/native-engine" && cargo test "$@"
               '';
             }
             {

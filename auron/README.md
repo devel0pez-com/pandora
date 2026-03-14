@@ -51,7 +51,7 @@ The examples generate parquet data, perform joins and aggregations, and show the
 ```
 auron/
   flake.nix        # nix dev shell
-  .gitignore       # ignores auron/
+  .gitignore       # ignores auron/ and .spark/
   README.md        # this file
   examples/        # custom examples
   auron/           # (gitignored) upstream master clone
