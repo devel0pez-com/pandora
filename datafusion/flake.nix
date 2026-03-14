@@ -68,7 +68,7 @@
               help = "Clone or update apache/datafusion (main)";
               command = ''
                 set -e
-                if [ -d "$PWD/.git" ] && grep -q "datafusion" "$PWD/.git/config" 2>/dev/null; then
+                if [ -d "$PWD/.git" ] && git -C "$PWD" remote get-url origin 2>/dev/null | grep -q "apache/datafusion\.git"; then
                   SRC_DIR="$PWD"
                 elif [ -d "$PWD/${dfSrc}/.git" ]; then
                   SRC_DIR="$PWD/${dfSrc}"
@@ -160,17 +160,22 @@
               help = "Run a DataFusion example (e.g. df-example simple_udaf)";
               command = ''
                 set -e
+                SRC_DIR="${dfSrc}/datafusion/datafusion-examples"
+                if [ ! -d "$SRC_DIR" ]; then
+                  echo "DataFusion source not found. Run 'df-fetch' first."
+                  exit 1
+                fi
                 if [ -z "$1" ]; then
                   echo "Usage: df-example <example_name>"
                   echo ""
                   echo "Available examples:"
-                  ls examples/*.rs 2>/dev/null | sed 's|examples/||;s|\.rs||' || echo "  (clone first with df-fetch)"
+                  find "$SRC_DIR/examples" -maxdepth 1 -name '*.rs' 2>/dev/null | sed 's|.*/||;s|\.rs||' | sort || true
                   exit 1
                 fi
                 EXAMPLE="$1"
                 shift
                 echo "Running example: $EXAMPLE"
-                cargo run --example "$EXAMPLE" "$@"
+                cargo run --manifest-path "$SRC_DIR/Cargo.toml" --example "$EXAMPLE" "$@"
               '';
             }
           ];

@@ -32,6 +32,7 @@ datafusion/
   flake.nix          # nix dev shell
   .gitignore         # ignores datafusion/
   README.md          # this file
-  examples/          # custom examples
   datafusion/        # (gitignored) upstream main clone
 ```
+
+`df-example` runs examples from the upstream clone (`datafusion/datafusion-examples/`).
