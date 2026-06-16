@@ -134,16 +134,24 @@
                 echo "Starting Sail Spark Connect server on ${sparkRemote} ..."
                 RUST_LOG=info nohup sail spark server --ip 127.0.0.1 --port "$SAIL_PORT" \
                   >"$LOGFILE" 2>&1 &
-                echo $! > "$PIDFILE"
-                # wait for the port to accept connections
+                SAIL_PID=$!
+                echo "$SAIL_PID" > "$PIDFILE"
+                # wait for the port, bailing out early if the server crashes
                 for _ in $(seq 1 30); do
+                  if ! kill -0 "$SAIL_PID" 2>/dev/null; then
+                    echo "Sail exited during startup — check .sail/server.log" >&2
+                    rm -f "$PIDFILE"
+                    exit 1
+                  fi
                   if ${pkgs.netcat-gnu}/bin/nc -z 127.0.0.1 "$SAIL_PORT" 2>/dev/null; then
-                    echo "Sail ready (pid $(cat "$PIDFILE")). Logs: .sail/server.log"
+                    echo "Sail ready (pid $SAIL_PID). Logs: .sail/server.log"
                     exit 0
                   fi
                   sleep 0.5
                 done
-                echo "Sail did not come up in time — check .sail/server.log" >&2
+                echo "Sail did not come up in time — stopping it. Check .sail/server.log" >&2
+                kill "$SAIL_PID" 2>/dev/null || true
+                rm -f "$PIDFILE"
                 exit 1
               '';
             }
@@ -155,11 +163,13 @@
                 set -euo pipefail
                 PIDFILE="$PRJ_ROOT/.sail/server.pid"
                 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-                  kill "$(cat "$PIDFILE")" && echo "Sail stopped."
-                  rm -f "$PIDFILE"
+                  kill "$(cat "$PIDFILE")" 2>/dev/null || true
+                  echo "Sail stopped."
                 else
                   echo "Sail not running."
                 fi
+                # Best-effort cleanup so a stale PID file never blocks sail-up.
+                rm -f "$PIDFILE"
               '';
             }
             {

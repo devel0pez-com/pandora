@@ -1,4 +1,5 @@
--- Revenue rollup per country (completed orders only).
+-- Per-country rollup: customer + order counts across all statuses,
+-- with revenue summed over completed orders only.
 with fct as (
 
     select * from {{ ref('fct_orders') }}

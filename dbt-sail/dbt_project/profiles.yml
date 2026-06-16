@@ -13,4 +13,6 @@ pandora_sail:
       schema: default
       host: localhost # required field; ignored by the session method
       server_side_parameters:
-        spark.remote: "sc://127.0.0.1:50051"
+        # Uses the devshell's SPARK_REMOTE (derived from SAIL_PORT); the
+        # fallback keeps the profile usable when run outside the shell.
+        spark.remote: "{{ env_var('SPARK_REMOTE', 'sc://127.0.0.1:50051') }}"
