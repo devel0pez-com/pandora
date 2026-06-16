@@ -12,8 +12,8 @@
         pkgs = nixpkgs.legacyPackages.${system};
 
         # Pin pyspark to the latest 3.5.x release.
-        # Bump `pysparkVersion`, clear `pysparkHash` to `lib.fakeHash`, run
-        # `nix develop` once, copy the `got:` hash from the error message.
+        # Bump `pysparkVersion`, set `pysparkHash = ""`, run `nix develop`
+        # once, then copy the `got:` hash from the error message.
         pysparkVersion = "3.5.8";
         pysparkHash = "sha256-VMygdnshtA45U60dMPhgHFOr+cvadjZTKJzc/KxSMTw=";
 
