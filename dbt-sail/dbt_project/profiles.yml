@@ -1,0 +1,16 @@
+# dbt connects to Sail through the Spark Connect protocol.
+#
+# `method: session` makes dbt-spark build a pyspark SparkSession; passing
+# `spark.remote` via server_side_parameters turns that session into a Spark
+# Connect *client* pointed at the local Sail server (started with `sail-up`).
+# No JVM and no adapter patching required (dbt-spark >= 1.9).
+pandora_sail:
+  target: dev
+  outputs:
+    dev:
+      type: spark
+      method: session
+      schema: default
+      host: localhost # required field; ignored by the session method
+      server_side_parameters:
+        spark.remote: "sc://127.0.0.1:50051"

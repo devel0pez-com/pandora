@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: "Order fact table enriched with customer + country."
+    columns:
+      - name: order_id
+        description: "Primary key."
+        data_tests: [unique, not_null]
+      - name: amount
+        data_tests: [not_null]
+      - name: region
+        description: "Null if the customer's country is not in the countries seed."
+
+  - name: dim_country
+    description: "Per-country revenue rollup."
+    columns:
+      - name: country_code
+        data_tests: [unique, not_null]
+      - name: completed_revenue
+        data_tests: [not_null]

@@ -34,6 +34,9 @@ A Nix flake toolbox for Apache data projects. Each subfolder is an independent d
 | `datafusion-comet/` | [Apache DataFusion Comet](https://github.com/apache/datafusion-comet) | Spark plugin — accelerates queries with native DataFusion execution |
 | `auron/` | [Apache Auron](https://github.com/apache/auron) | Spark & Flink plugin — native vectorized execution via DataFusion |
 | `datafusion/` | [Apache DataFusion](https://github.com/apache/datafusion) | Standalone Rust SQL query engine |
+| `pyspark-4/` | [Apache Spark](https://spark.apache.org/) | PySpark 4.x REPL shell (Python 3.13 + JDK 17, from nixpkgs) |
+| `pyspark-3.5/` | [Apache Spark](https://spark.apache.org/) | PySpark 3.5.x REPL shell (pinned PyPI release + ptpython driver) |
+| `dbt-sail/` | [dbt](https://github.com/dbt-labs/dbt-core) + [Sail](https://github.com/lakehq/sail) | dbt ELT demo running on Sail via Spark Connect (no JVM) |
 
 ## Comet vs Auron
 

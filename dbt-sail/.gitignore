@@ -1,0 +1,7 @@
+.direnv/
+.sail/
+spark-warehouse/
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+dbt_project/.user.yml
