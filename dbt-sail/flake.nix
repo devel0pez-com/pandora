@@ -124,6 +124,10 @@
               help = "Start the Sail Spark Connect server (background, port $SAIL_PORT)";
               command = ''
                 set -euo pipefail
+                # Run from the project root so Sail's relative artifacts
+                # (spark-warehouse/, .sail/) land under the repo regardless of
+                # the caller's cwd, matching the relative log-path hints below.
+                cd "$PRJ_ROOT"
                 mkdir -p "$PRJ_ROOT/.sail"
                 PIDFILE="$PRJ_ROOT/.sail/server.pid"
                 LOGFILE="$PRJ_ROOT/.sail/server.log"
