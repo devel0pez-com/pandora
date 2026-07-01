@@ -90,11 +90,11 @@ through an overlay in [`flake.nix`](./flake.nix):
 | [`pkgs/pysail/package.nix`](./pkgs/pysail/package.nix) | vendored from PR #530421 | delete when the PR merges |
 
 `sqlparams` (a dependency of `dbt-spark`) was packaged the same way and has
-**already merged** into nixpkgs (`python3Packages.sqlparams` 6.2.0), so its
-vendored file and overlay entry are gone — `dbt-spark` now pulls it from the
-channel. That is the whole workflow in action: the day any of these land in
-your channel, **delete the file in `pkgs/` and its line in the overlay** and the
-flake keeps working on the upstream package.
+**already merged** into nixpkgs as `python3Packages.sqlparams`, so its vendored
+file and overlay entry are gone — `dbt-spark` now pulls it from the channel.
+That is the whole workflow in action: the day any of these land in your channel,
+**delete the file in `pkgs/` and its line in the overlay** and the flake keeps
+working, now backed by the upstream package.
 
 Verify the packaging in isolation:
 
