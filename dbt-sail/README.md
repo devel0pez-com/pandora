@@ -79,7 +79,7 @@ The Spark Connect client is pure gRPC — **no JVM in this shell**.
 
 ## Packaging — the point of this folder
 
-`dbt-spark` and `sqlparams` are **not in nixpkgs yet**; `pysail` is in-flight as
+`dbt-spark` is **not in nixpkgs yet**; `pysail` is in-flight as
 [PR #530421](https://github.com/NixOS/nixpkgs/pull/530421). They are packaged
 here under [`pkgs/`](./pkgs) **exactly as nixpkgs expects them**, then wired in
 through an overlay in [`flake.nix`](./flake.nix):
@@ -87,16 +87,19 @@ through an overlay in [`flake.nix`](./flake.nix):
 | File | Status | Port to nixpkgs |
 |------|--------|-----------------|
 | [`pkgs/dbt-spark/package.nix`](./pkgs/dbt-spark/package.nix) | new | drop into `pkgs/development/python-modules/dbt-spark/` |
-| [`pkgs/sqlparams/package.nix`](./pkgs/sqlparams/package.nix) | new | drop into `pkgs/development/python-modules/sqlparams/` |
 | [`pkgs/pysail/package.nix`](./pkgs/pysail/package.nix) | vendored from PR #530421 | delete when the PR merges |
 
-The day any of these land in your channel: **delete the file in `pkgs/` and its
-line in the overlay** — the flake keeps working, now using the upstream package.
+`sqlparams` (a dependency of `dbt-spark`) was packaged the same way and has
+**already merged** into nixpkgs as `python3Packages.sqlparams`, so its vendored
+file and overlay entry are gone — `dbt-spark` now pulls it from the channel.
+That is the whole workflow in action: the day any of these land in your channel,
+**delete the file in `pkgs/` and its line in the overlay** and the flake keeps
+working, now backed by the upstream package.
 
 Verify the packaging in isolation:
 
 ```bash
-nix build .#dbt-spark    # also .#sqlparams, .#pysail, .#default (full env)
+nix build .#dbt-spark    # also .#pysail, .#default (full env)
 ```
 
 > Note: `pysail` is a Rust/maturin build; `nix build .#pysail` compiles Sail.

@@ -19,14 +19,6 @@
         pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
           (pyfinal: pyprev: {
 
-            # ── sqlparams ────────────────────────────────────────────────
-            # UPSTREAM: move ./pkgs/sqlparams/package.nix to
-            #   nixpkgs/pkgs/development/python-modules/sqlparams/package.nix
-            # and add to pkgs/top-level/python-packages.nix:
-            #   sqlparams = callPackage ../development/python-modules/sqlparams { };
-            # THEN DELETE: this entry + the ./pkgs/sqlparams folder.
-            sqlparams = pyfinal.callPackage ./pkgs/sqlparams/package.nix { };
-
             # ── dbt-spark ────────────────────────────────────────────────
             # UPSTREAM: move ./pkgs/dbt-spark/package.nix to
             #   nixpkgs/pkgs/development/python-modules/dbt-spark/package.nix
